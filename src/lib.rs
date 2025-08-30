@@ -75,10 +75,7 @@ impl AnimeGameData {
         Ok(())
     }
 
-    pub async fn fetch_affix_map(
-        dimbreath: &Dimbreath,
-        git_ref: &str,
-    ) -> Result<HashMap<u32, Affix>> {
+    async fn fetch_affix_map(dimbreath: &Dimbreath, git_ref: &str) -> Result<HashMap<u32, Affix>> {
         let data: Vec<game_data::ReliquaryAffixExcelConfigDataEntry> = dimbreath
             .get_json_file(git_ref, "ExcelBinOutput/ReliquaryAffixExcelConfigData.json")
             .await?;
@@ -97,7 +94,7 @@ impl AnimeGameData {
             .collect())
     }
 
-    pub async fn fetch_artifact_map(
+    async fn fetch_artifact_map(
         dimbreath: &Dimbreath,
         git_ref: &str,
         set_map: &HashMap<u32, String>,
@@ -125,7 +122,7 @@ impl AnimeGameData {
         Ok(map)
     }
 
-    pub async fn fetch_character_map(
+    async fn fetch_character_map(
         dimbreath: &Dimbreath,
         git_ref: &str,
         text_map: &HashMap<u32, String>,
@@ -140,7 +137,7 @@ impl AnimeGameData {
             .collect())
     }
 
-    pub async fn fetch_material_map(
+    async fn fetch_material_map(
         dimbreath: &Dimbreath,
         git_ref: &str,
         text_map: &HashMap<u32, String>,
@@ -155,7 +152,7 @@ impl AnimeGameData {
             .collect())
     }
 
-    pub async fn fetch_property_map(
+    async fn fetch_property_map(
         dimbreath: &Dimbreath,
         git_ref: &str,
     ) -> Result<HashMap<u32, Property>> {
@@ -172,7 +169,7 @@ impl AnimeGameData {
             .collect())
     }
 
-    pub async fn fetch_set_map(
+    async fn fetch_set_map(
         dimbreath: &Dimbreath,
         git_ref: &str,
         text_map: &HashMap<u32, String>,
@@ -193,7 +190,7 @@ impl AnimeGameData {
             .collect())
     }
 
-    pub async fn fetch_skill_type_map(
+    async fn fetch_skill_type_map(
         dimbreath: &Dimbreath,
         git_ref: &str,
     ) -> Result<HashMap<u32, SkillType>> {
@@ -214,16 +211,13 @@ impl AnimeGameData {
         Ok(type_map)
     }
 
-    pub async fn fetch_text_map(
-        dimbreath: &Dimbreath,
-        git_ref: &str,
-    ) -> Result<HashMap<u32, String>> {
+    async fn fetch_text_map(dimbreath: &Dimbreath, git_ref: &str) -> Result<HashMap<u32, String>> {
         dimbreath
             .get_json_file(git_ref, "TextMap/TextMapEN.json")
             .await
     }
 
-    pub async fn fetch_weapon_map(
+    async fn fetch_weapon_map(
         dimbreath: &Dimbreath,
         git_ref: &str,
         text_map: &HashMap<u32, String>,
