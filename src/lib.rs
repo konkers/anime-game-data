@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 
 mod dimbreath;
 mod game_data;
@@ -55,6 +55,54 @@ impl AnimeGameData {
             skill_type_map: HashMap::new(),
             weapon_map: HashMap::new(),
         })
+    }
+
+    pub fn get_affix(&self, id: u32) -> Result<&Affix> {
+        self.affix_map
+            .get(&id)
+            .ok_or_else(|| anyhow!("Unable to fetch affix {id}"))
+    }
+
+    pub fn get_artifact(&self, id: u32) -> Result<&Artifact> {
+        self.artifact_map
+            .get(&id)
+            .ok_or_else(|| anyhow!("Unable to fetch artifact {id}"))
+    }
+
+    pub fn get_character(&self, id: u32) -> Result<&String> {
+        self.character_map
+            .get(&id)
+            .ok_or_else(|| anyhow!("Unable to fetch character {id}"))
+    }
+
+    pub fn get_material(&self, id: u32) -> Result<&String> {
+        self.material_map
+            .get(&id)
+            .ok_or_else(|| anyhow!("Unable to fetch material {id}"))
+    }
+
+    pub fn get_property(&self, id: u32) -> Result<&Property> {
+        self.property_map
+            .get(&id)
+            .ok_or_else(|| anyhow!("Unable to fetch property {id}"))
+    }
+
+    pub fn get_set(&self, id: u32) -> Result<&String> {
+        self.set_map
+            .get(&id)
+            .ok_or_else(|| anyhow!("Unable to fetch set {id}"))
+    }
+
+    pub fn get_skill_type(&self, id: u32) -> Result<&SkillType> {
+        self.skill_type_map
+            .get(&id)
+            .ok_or_else(|| anyhow!("Unable to fetch skill type {id}"))
+    }
+
+    pub fn get_weapon(&self, id: u32) -> Result<&Weapon> {
+        self.weapon_map
+            .get(&id)
+            .ok_or_else(|| anyhow!("Unable to fetch weapon {id}"))
     }
 
     pub async fn update(&mut self) -> Result<()> {
@@ -333,7 +381,7 @@ mod tests {
         let source = TestDataSoruce;
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
-        assert_eq!(data.character_map.get(&10000061), Some(&"Kirara".into()));
+        assert_eq!(data.get_character(10000061).unwrap(), &"Kirara".to_string());
     }
 
     #[tokio::test]
@@ -341,9 +389,9 @@ mod tests {
         let source = TestDataSoruce;
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
-        assert_eq!(data.skill_type_map.get(&10024), Some(&SkillType::Auto));
-        assert_eq!(data.skill_type_map.get(&10018), Some(&SkillType::Skill));
-        assert_eq!(data.skill_type_map.get(&10019), Some(&SkillType::Burst));
+        assert_eq!(data.get_skill_type(10024).unwrap(), &SkillType::Auto);
+        assert_eq!(data.get_skill_type(10018).unwrap(), &SkillType::Skill);
+        assert_eq!(data.get_skill_type(10019).unwrap(), &SkillType::Burst);
     }
 
     #[tokio::test]
@@ -352,8 +400,8 @@ mod tests {
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
         assert_eq!(
-            data.set_map.get(&15031),
-            Some(&"Marechaussee Hunter".into())
+            data.get_set(15031).unwrap(),
+            &"Marechaussee Hunter".to_string()
         );
     }
 
@@ -362,7 +410,7 @@ mod tests {
         let source = TestDataSoruce;
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
-        assert_eq!(data.material_map.get(&100002), Some(&"Sunsettia".into()));
+        assert_eq!(data.get_material(100002).unwrap(), &"Sunsettia".to_string());
     }
 
     #[tokio::test]
@@ -373,20 +421,20 @@ mod tests {
 
         // Flat affixes contain their vaule unmodified.
         assert_eq!(
-            data.affix_map.get(&501022),
-            Some(&Affix {
+            data.get_affix(501022).unwrap(),
+            &Affix {
                 property: Property::Hp,
                 value: 239.0
-            })
+            }
         );
 
         // Prercentage affixes get multipled by 100 from thier data value.
         assert_eq!(
-            data.affix_map.get(&982001),
-            Some(&Affix {
+            data.get_affix(982001).unwrap(),
+            &Affix {
                 property: Property::GeoDamage,
                 value: 80.0
-            })
+            }
         );
     }
 
@@ -397,12 +445,12 @@ mod tests {
         data.update_impl(&source).await.unwrap();
 
         assert_eq!(
-            data.artifact_map.get(&31534),
-            Some(&Artifact {
+            data.get_artifact(31534).unwrap(),
+            &Artifact {
                 set: "Marechaussee Hunter".into(),
                 slot: ArtifactSlot::Circlet,
                 rarity: 5
-            })
+            }
         );
     }
 
@@ -412,7 +460,7 @@ mod tests {
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
 
-        assert_eq!(data.property_map.get(&50960), Some(&Property::PyroDamage));
+        assert_eq!(data.get_property(50960).unwrap(), &Property::PyroDamage);
     }
 
     #[tokio::test]
@@ -422,11 +470,11 @@ mod tests {
         data.update_impl(&source).await.unwrap();
 
         assert_eq!(
-            data.weapon_map.get(&11505),
-            Some(&Weapon {
+            data.get_weapon(11505).unwrap(),
+            &Weapon {
                 name: "Primordial Jade Cutter".into(),
                 rarity: 5
-            })
+            }
         );
     }
 }
