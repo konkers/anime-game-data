@@ -1,21 +1,22 @@
 use std::str::FromStr;
 
 use anyhow::{Error, anyhow};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Affix {
     pub property: Property,
     pub value: f64,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Artifact {
     pub set: String,
     pub slot: ArtifactSlot,
     pub rarity: u32,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum ArtifactSlot {
     Flower,
     Plume,
@@ -47,7 +48,7 @@ impl ArtifactSlot {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum Property {
     Hp,
     HpPercent,
@@ -146,14 +147,14 @@ impl FromStr for Property {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum SkillType {
     Auto,
     Skill,
     Burst,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Weapon {
     pub name: String,
     pub rarity: u32,
