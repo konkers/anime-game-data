@@ -18,6 +18,14 @@ tokio = { version = "1.47.1", features = [
 	"rt-multi-thread",
 ], optional = true }
 
+[dev-dependencies]
+tokio = { version = "1.47.1", features = [
+	"rt",
+	"tokio-macros",
+	"macros",
+	"rt-multi-thread",
+] }
+
 [features]
 cli = ["dep:clap", "dep:tokio"]
 

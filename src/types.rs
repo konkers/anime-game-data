@@ -2,20 +2,20 @@ use std::str::FromStr;
 
 use anyhow::{Error, anyhow};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Affix {
     pub property: Property,
     pub value: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Artifact {
     pub set: String,
     pub slot: ArtifactSlot,
     pub rarity: u32,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ArtifactSlot {
     Flower,
     Plume,
@@ -47,7 +47,7 @@ impl ArtifactSlot {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Property {
     Hp,
     HpPercent,
@@ -146,14 +146,14 @@ impl FromStr for Property {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SkillType {
     Auto,
     Skill,
     Burst,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Weapon {
     pub name: String,
     pub rarity: u32,
