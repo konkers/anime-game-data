@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow};
 
@@ -8,6 +11,7 @@ mod types;
 
 use dimbreath::Dimbreath;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 pub use types::*;
 
 use crate::game_data::{
@@ -29,9 +33,12 @@ fn lookup_text(text_map: &HashMap<u32, String>, id: u32) -> Option<&String> {
     res
 }
 
-#[derive(Debug)]
-pub struct AnimeGameData {
-    latest_git_hash: Option<String>,
+const DATABASE_VERSION: u32 = 0;
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Database {
+    version: u32,
+    git_hash: String,
     affix_map: HashMap<u32, Affix>,
     artifact_map: HashMap<u32, Artifact>,
     character_map: HashMap<u32, String>,
@@ -42,10 +49,11 @@ pub struct AnimeGameData {
     weapon_map: HashMap<u32, Weapon>,
 }
 
-impl AnimeGameData {
-    pub fn new() -> Result<Self> {
-        Ok(Self {
-            latest_git_hash: None,
+impl Database {
+    pub fn new(git_hash: &str) -> Self {
+        Self {
+            version: DATABASE_VERSION,
+            git_hash: git_hash.into(),
             affix_map: HashMap::new(),
             artifact_map: HashMap::new(),
             character_map: HashMap::new(),
@@ -54,53 +62,101 @@ impl AnimeGameData {
             set_map: HashMap::new(),
             skill_type_map: HashMap::new(),
             weapon_map: HashMap::new(),
+        }
+    }
+
+    pub fn load_from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let path = path.as_ref();
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        let db = serde_json::from_reader(reader)?;
+        Ok(db)
+    }
+}
+
+#[derive(Debug)]
+pub struct AnimeGameData {
+    cache_path: Option<PathBuf>,
+    db: Option<Database>,
+}
+
+impl AnimeGameData {
+    pub fn new() -> Result<Self> {
+        Ok(Self {
+            cache_path: None,
+            db: None,
         })
     }
 
+    pub fn new_with_cache<P: AsRef<Path>>(cache_path: P) -> Result<Self> {
+        let cache_path = cache_path.as_ref();
+
+        // Try to load cached data ignoring errors and instead leave and empty
+        // database.
+        let db = Database::load_from_path(cache_path).ok();
+
+        Ok(Self {
+            cache_path: Some(cache_path.to_owned()),
+            db,
+        })
+    }
+
+    fn db(&self) -> Result<&Database> {
+        self.db.as_ref().ok_or_else(|| anyhow!("No data loaded"))
+    }
+
     pub fn get_affix(&self, id: u32) -> Result<&Affix> {
-        self.affix_map
+        self.db()?
+            .affix_map
             .get(&id)
             .ok_or_else(|| anyhow!("Unable to fetch affix {id}"))
     }
 
     pub fn get_artifact(&self, id: u32) -> Result<&Artifact> {
-        self.artifact_map
+        self.db()?
+            .artifact_map
             .get(&id)
             .ok_or_else(|| anyhow!("Unable to fetch artifact {id}"))
     }
 
     pub fn get_character(&self, id: u32) -> Result<&String> {
-        self.character_map
+        self.db()?
+            .character_map
             .get(&id)
             .ok_or_else(|| anyhow!("Unable to fetch character {id}"))
     }
 
     pub fn get_material(&self, id: u32) -> Result<&String> {
-        self.material_map
+        self.db()?
+            .material_map
             .get(&id)
             .ok_or_else(|| anyhow!("Unable to fetch material {id}"))
     }
 
     pub fn get_property(&self, id: u32) -> Result<&Property> {
-        self.property_map
+        self.db()?
+            .property_map
             .get(&id)
             .ok_or_else(|| anyhow!("Unable to fetch property {id}"))
     }
 
     pub fn get_set(&self, id: u32) -> Result<&String> {
-        self.set_map
+        self.db()?
+            .set_map
             .get(&id)
             .ok_or_else(|| anyhow!("Unable to fetch set {id}"))
     }
 
     pub fn get_skill_type(&self, id: u32) -> Result<&SkillType> {
-        self.skill_type_map
+        self.db()?
+            .skill_type_map
             .get(&id)
             .ok_or_else(|| anyhow!("Unable to fetch skill type {id}"))
     }
 
     pub fn get_weapon(&self, id: u32) -> Result<&Weapon> {
-        self.weapon_map
+        self.db()?
+            .weapon_map
             .get(&id)
             .ok_or_else(|| anyhow!("Unable to fetch weapon {id}"))
     }
@@ -111,31 +167,41 @@ impl AnimeGameData {
     }
 
     async fn update_impl<Source: GameDataSource>(&mut self, source: &Source) -> Result<()> {
+        // Check if data is already up to date
         let latest_git_hash = source.get_latest_hash().await?;
-        if Some(latest_git_hash.clone()) == self.latest_git_hash {
+        if let Some(db) = &self.db
+            && db.git_hash == latest_git_hash
+        {
             return Ok(());
         }
 
-        // Fetch all data first before updating `self` to ensure consistency.
+        // Index all data into a separate DB to ensure consistency.
+        let mut db = Database::new(&latest_git_hash);
         let text_map = Self::fetch_text_map(source, &latest_git_hash).await?;
-        let skill_type_map = Self::fetch_skill_type_map(source, &latest_git_hash).await?;
-        let set_map = Self::fetch_set_map(source, &latest_git_hash, &text_map).await?;
-        let artifact_map = Self::fetch_artifact_map(source, &latest_git_hash, &set_map).await?;
-        let property_map = Self::fetch_property_map(source, &latest_git_hash).await?;
-        let affix_map = Self::fetch_affix_map(source, &latest_git_hash).await?;
-        let weapon_map = Self::fetch_weapon_map(source, &latest_git_hash, &text_map).await?;
-        let material_map = Self::fetch_material_map(source, &latest_git_hash, &text_map).await?;
-        let character_map = Self::fetch_character_map(source, &latest_git_hash, &text_map).await?;
+        db.skill_type_map = Self::fetch_skill_type_map(source, &latest_git_hash).await?;
+        db.set_map = Self::fetch_set_map(source, &latest_git_hash, &text_map).await?;
+        db.artifact_map = Self::fetch_artifact_map(source, &latest_git_hash, &db.set_map).await?;
+        db.property_map = Self::fetch_property_map(source, &latest_git_hash).await?;
+        db.affix_map = Self::fetch_affix_map(source, &latest_git_hash).await?;
+        db.weapon_map = Self::fetch_weapon_map(source, &latest_git_hash, &text_map).await?;
+        db.material_map = Self::fetch_material_map(source, &latest_git_hash, &text_map).await?;
+        db.character_map = Self::fetch_character_map(source, &latest_git_hash, &text_map).await?;
 
-        self.latest_git_hash = Some(latest_git_hash);
-        self.affix_map = affix_map;
-        self.artifact_map = artifact_map;
-        self.character_map = character_map;
-        self.material_map = material_map;
-        self.property_map = property_map;
-        self.set_map = set_map;
-        self.skill_type_map = skill_type_map;
-        self.weapon_map = weapon_map;
+        self.db = Some(db);
+
+        let _ = self.try_save_db();
+        Ok(())
+    }
+
+    fn try_save_db(&self) -> Result<()> {
+        let Some(cache_path) = &self.cache_path else {
+            return Err(anyhow!("no cache path provided"));
+        };
+
+        let file = File::create(cache_path)?;
+        let writer = BufWriter::new(file);
+        serde_json::to_writer_pretty(writer, &self.db)?;
+
         Ok(())
     }
 
@@ -325,12 +391,13 @@ impl AnimeGameData {
 #[cfg(test)]
 mod tests {
     use anyhow::anyhow;
+    use tempfile::NamedTempFile;
 
     use super::*;
 
-    struct TestDataSoruce;
+    struct TestDataSource;
 
-    impl GameDataSource for TestDataSoruce {
+    impl GameDataSource for TestDataSource {
         async fn get_latest_hash(&self) -> Result<String> {
             Ok("13be4fd7343fe4cee8fa0096fe854b1c5b01b124".into())
         }
@@ -376,9 +443,28 @@ mod tests {
         }
     }
 
+    struct TestDataSource2;
+
+    impl GameDataSource for TestDataSource2 {
+        async fn get_latest_hash(&self) -> Result<String> {
+            Ok("13be4fd7343fe4cee8fa0096fe854b1c5b01b124-2".into())
+        }
+
+        async fn get_json_file<T: DeserializeOwned>(&self, git_ref: &str, path: &str) -> Result<T> {
+            let json_string = match path {
+                "ExcelBinOutput/ReliquaryAffixExcelConfigData.json" => {
+                    include_str!("test_data/ExcelBinOutput/ReliquaryAffixExcelConfigData2.json")
+                }
+                _ => return TestDataSource {}.get_json_file(git_ref, path).await,
+            };
+            let data = serde_json::from_str(json_string)?;
+            Ok(data)
+        }
+    }
+
     #[tokio::test]
     async fn character_map_returns_correct_character() {
-        let source = TestDataSoruce;
+        let source = TestDataSource;
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
         assert_eq!(data.get_character(10000061).unwrap(), &"Kirara".to_string());
@@ -386,7 +472,7 @@ mod tests {
 
     #[tokio::test]
     async fn skill_type_map_returns_correct_type() {
-        let source = TestDataSoruce;
+        let source = TestDataSource;
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
         assert_eq!(data.get_skill_type(10024).unwrap(), &SkillType::Auto);
@@ -396,7 +482,7 @@ mod tests {
 
     #[tokio::test]
     async fn set_map_returns_correct_set() {
-        let source = TestDataSoruce;
+        let source = TestDataSource;
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
         assert_eq!(
@@ -407,7 +493,7 @@ mod tests {
 
     #[tokio::test]
     async fn material_map_returns_correct_material() {
-        let source = TestDataSoruce;
+        let source = TestDataSource;
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
         assert_eq!(data.get_material(100002).unwrap(), &"Sunsettia".to_string());
@@ -415,7 +501,7 @@ mod tests {
 
     #[tokio::test]
     async fn affix_map_returns_correct_affix() {
-        let source = TestDataSoruce;
+        let source = TestDataSource;
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
 
@@ -440,7 +526,7 @@ mod tests {
 
     #[tokio::test]
     async fn artifact_map_returns_correct_artifact() {
-        let source = TestDataSoruce;
+        let source = TestDataSource;
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
 
@@ -456,7 +542,7 @@ mod tests {
 
     #[tokio::test]
     async fn proptery_map_returns_correct_property() {
-        let source = TestDataSoruce;
+        let source = TestDataSource;
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
 
@@ -465,7 +551,7 @@ mod tests {
 
     #[tokio::test]
     async fn weapon_map_returns_correct_weapon() {
-        let source = TestDataSoruce;
+        let source = TestDataSource;
         let mut data = AnimeGameData::new().unwrap();
         data.update_impl(&source).await.unwrap();
 
@@ -474,6 +560,90 @@ mod tests {
             &Weapon {
                 name: "Primordial Jade Cutter".into(),
                 rarity: 5
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn data_is_cached_by_update() {
+        let tempfile = NamedTempFile::new().unwrap();
+
+        let source = TestDataSource;
+        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+
+        // Affix does not exist before update
+        assert!(data.get_affix(501022).is_err());
+
+        data.update_impl(&source).await.unwrap();
+
+        // Affix exists after update
+        assert_eq!(
+            data.get_affix(501022).unwrap(),
+            &Affix {
+                property: Property::Hp,
+                value: 239.0
+            }
+        );
+
+        drop(data);
+
+        // Re-open data with valid cache.
+        let data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+
+        // Affix exists after loading from cache
+        assert_eq!(
+            data.get_affix(501022).unwrap(),
+            &Affix {
+                property: Property::Hp,
+                value: 239.0
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn cached_data_is_updated_from_source() {
+        let tempfile = NamedTempFile::new().unwrap();
+
+        let source = TestDataSource;
+        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+
+        // Affix does not exist before update
+        assert!(data.get_affix(501022).is_err());
+
+        data.update_impl(&source).await.unwrap();
+
+        // Affix exists after update
+        assert_eq!(
+            data.get_affix(501022).unwrap(),
+            &Affix {
+                property: Property::Hp,
+                value: 239.0
+            }
+        );
+
+        drop(data);
+
+        // Re-open data with valid cache.
+        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+
+        // Affix exists after loading from cache
+        assert_eq!(
+            data.get_affix(501022).unwrap(),
+            &Affix {
+                property: Property::Hp,
+                value: 239.0
+            }
+        );
+
+        let source = TestDataSource2;
+        data.update_impl(&source).await.unwrap();
+
+        // Affix is updated with second source data
+        assert_eq!(
+            data.get_affix(501022).unwrap(),
+            &Affix {
+                property: Property::Hp,
+                value: 240.0
             }
         );
     }
