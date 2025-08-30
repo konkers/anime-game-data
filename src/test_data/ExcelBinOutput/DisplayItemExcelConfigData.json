@@ -1,0 +1,53 @@
+[
+  {
+    "descTextMapHash": 3497790018,
+    "displayType": "RELIQUARY_ITEM",
+    "dropable": false,
+    "gadgetId": 0,
+    "globalItemLimit": 0,
+    "icon": "UI_RelicIcon_15031_4",
+    "id": 400260,
+    "itemType": "ITEM_DISPLAY",
+    "nameTextMapHash": 864628441,
+    "param": 15031,
+    "rank": 0,
+    "rankLevel": 4,
+    "typeDescTextMapHash": 3160378775,
+    "useLevel": 0,
+    "weight": 0
+  },
+  {
+    "descTextMapHash": 1732637874,
+    "displayType": "RELIQUARY_ITEM",
+    "dropable": false,
+    "gadgetId": 0,
+    "globalItemLimit": 0,
+    "icon": "UI_RelicIcon_15031_4",
+    "id": 400261,
+    "itemType": "ITEM_DISPLAY",
+    "nameTextMapHash": 2520491569,
+    "param": 15031,
+    "rank": 0,
+    "rankLevel": 5,
+    "typeDescTextMapHash": 2815235559,
+    "useLevel": 0,
+    "weight": 0
+  },
+  {
+    "descTextMapHash": 3946519818,
+    "displayType": "RELIQUARY_ITEM_SMELT",
+    "dropable": false,
+    "gadgetId": 0,
+    "globalItemLimit": 0,
+    "icon": "UI_DisplayItemIcon_419028",
+    "id": 419028,
+    "itemType": "ITEM_DISPLAY",
+    "nameTextMapHash": 212482153,
+    "param": 15031,
+    "rank": 0,
+    "rankLevel": 5,
+    "typeDescTextMapHash": 4277744927,
+    "useLevel": 0,
+    "weight": 0
+  }
+]

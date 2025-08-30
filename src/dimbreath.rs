@@ -2,6 +2,8 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
+use super::GameDataSource;
+
 const COMMITS_API_URL: &str = "https://gitlab.com/api/v4/projects/53216109/repository/commits";
 const REPO_BASE_URL: &str = "https://gitlab.com/Dimbreath/AnimeGameData/-/raw";
 
@@ -33,8 +35,10 @@ impl Dimbreath {
             client: reqwest::Client::builder().gzip(true).build()?,
         })
     }
+}
 
-    pub async fn get_latest_hash(&self) -> Result<String> {
+impl GameDataSource for Dimbreath {
+    async fn get_latest_hash(&self) -> Result<String> {
         let commits = self
             .client
             .get(COMMITS_API_URL)
@@ -48,7 +52,7 @@ impl Dimbreath {
         Ok(commits[0].id.clone())
     }
 
-    pub async fn get_json_file<T: DeserializeOwned>(&self, git_ref: &str, path: &str) -> Result<T> {
+    async fn get_json_file<T: DeserializeOwned>(&self, git_ref: &str, path: &str) -> Result<T> {
         let url = format!("{REPO_BASE_URL}/{git_ref}/{path}");
         self.client
             .get(&url)
