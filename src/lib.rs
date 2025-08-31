@@ -161,9 +161,19 @@ impl AnimeGameData {
             .ok_or_else(|| anyhow!("Unable to fetch weapon {id}"))
     }
 
+    pub async fn needs_update(&self) -> Result<bool> {
+        self.needs_update_impl(&Dimbreath::new()?).await
+    }
+
+    async fn needs_update_impl<Source: GameDataSource>(&self, source: &Source) -> Result<bool> {
+        let Some(db) = &self.db else {
+            return Ok(true);
+        };
+        Ok(db.git_hash != source.get_latest_hash().await?)
+    }
+
     pub async fn update(&mut self) -> Result<()> {
-        let dimbreath = Dimbreath::new()?;
-        self.update_impl(&dimbreath).await
+        self.update_impl(&Dimbreath::new()?).await
     }
 
     async fn update_impl<Source: GameDataSource>(&mut self, source: &Source) -> Result<()> {
@@ -646,5 +656,35 @@ mod tests {
                 value: 240.0
             }
         );
+    }
+
+    #[tokio::test]
+    async fn needs_update_is_correct_across_caches_and_updates() {
+        let tempfile = NamedTempFile::new().unwrap();
+
+        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+
+        let source = TestDataSource;
+        let source2 = TestDataSource2;
+        // A new database always needs updating.
+        assert!(data.needs_update_impl(&source).await.unwrap());
+
+        // After updating an update is no longer needed.
+        data.update_impl(&source).await.unwrap();
+        assert!(!data.needs_update_impl(&source).await.unwrap());
+
+        drop(data);
+
+        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+        // After re-opening A new database doesn't need an update from the same
+        // source.
+        assert!(!data.needs_update_impl(&source).await.unwrap());
+
+        // With a new source, it does need updating
+        assert!(data.needs_update_impl(&source2).await.unwrap());
+
+        // After updating an update is no longer needed.
+        data.update_impl(&source2).await.unwrap();
+        assert!(!data.needs_update_impl(&source2).await.unwrap());
     }
 }
