@@ -160,6 +160,10 @@ impl AnimeGameData {
             .ok_or_else(|| anyhow!("Unable to fetch weapon {id}"))
     }
 
+    pub fn has_data(&self) -> bool {
+        self.db.is_some()
+    }
+
     pub async fn needs_update(&self) -> Result<bool> {
         self.needs_update_impl(&Dimbreath::new()?).await
     }
