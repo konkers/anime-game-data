@@ -48,7 +48,7 @@ impl ArtifactSlot {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum Property {
     Hp,
     HpPercent,
