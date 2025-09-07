@@ -27,8 +27,7 @@ trait GameDataSource {
 fn lookup_text(text_map: &HashMap<u32, String>, id: u32) -> Option<&String> {
     let res = text_map.get(&id);
     if res.is_none() {
-        // TODO: replace with logging or tracing.
-        println!("Unable to lookup text for hash {id}");
+        tracing::debug!("Unable to lookup text for hash {id}");
     }
     res
 }
