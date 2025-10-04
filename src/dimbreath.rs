@@ -58,7 +58,7 @@ impl GameDataSource for Dimbreath {
             .get(&url)
             .send()
             .await
-            .with_context(|| format!("Failed to send requte for {url}"))?
+            .with_context(|| format!("Failed to send request for {url}"))?
             .json::<T>()
             .await
             .with_context(|| format!("Failed to parse {url}"))
