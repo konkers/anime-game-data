@@ -180,6 +180,7 @@ impl AnimeGameData {
     }
 
     async fn update_impl<Source: GameDataSource>(&mut self, source: &Source) -> Result<()> {
+        tracing::info!("Checking for updated data");
         // Check if data is already up to date
         let latest_git_hash = source.get_latest_hash().await?;
         if let Some(db) = &self.db
@@ -187,17 +188,36 @@ impl AnimeGameData {
         {
             return Ok(());
         }
+        tracing::info!("New git hash detected {latest_git_hash}");
 
         // Index all data into a separate DB to ensure consistency.
         let mut db = Database::new(&latest_git_hash);
+
+        tracing::info!("Downloading text map");
         let text_map = Self::fetch_text_map(source, &latest_git_hash).await?;
+
+        tracing::info!("Downloading skill type map");
         db.skill_type_map = Self::fetch_skill_type_map(source, &latest_git_hash).await?;
+
+        tracing::info!("Downloading set map");
         db.set_map = Self::fetch_set_map(source, &latest_git_hash, &text_map).await?;
+
+        tracing::info!("Downloading artifact map");
         db.artifact_map = Self::fetch_artifact_map(source, &latest_git_hash, &db.set_map).await?;
+
+        tracing::info!("Downloading property map");
         db.property_map = Self::fetch_property_map(source, &latest_git_hash).await?;
+
+        tracing::info!("Downloading affix map");
         db.affix_map = Self::fetch_affix_map(source, &latest_git_hash).await?;
+
+        tracing::info!("Downloading weapon map");
         db.weapon_map = Self::fetch_weapon_map(source, &latest_git_hash, &text_map).await?;
+
+        tracing::info!("Downloading material map");
         db.material_map = Self::fetch_material_map(source, &latest_git_hash, &text_map).await?;
+
+        tracing::info!("Downloading character map");
         db.character_map = Self::fetch_character_map(source, &latest_git_hash, &text_map).await?;
 
         self.db = Some(db);
