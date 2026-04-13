@@ -32,7 +32,7 @@ fn lookup_text(text_map: &HashMap<u32, String>, id: u32) -> Option<&String> {
     res
 }
 
-const DATABASE_VERSION: u32 = 0;
+const DATABASE_VERSION: u32 = 1;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Database {
@@ -68,7 +68,14 @@ impl Database {
         let path = path.as_ref();
         let file = File::open(path)?;
         let reader = BufReader::new(file);
-        let db = serde_json::from_reader(reader)?;
+        let db: Self = serde_json::from_reader(reader)?;
+        if db.version != DATABASE_VERSION {
+            return Err(anyhow!(
+                "Database versions do not match {} != {}",
+                db.version,
+                DATABASE_VERSION
+            ));
+        }
         Ok(db)
     }
 }
@@ -392,7 +399,7 @@ impl AnimeGameData {
         git_ref: &str,
     ) -> Result<HashMap<u32, String>> {
         source
-            .get_json_file(git_ref, "TextMap/TextMapEN.json")
+            .get_json_file(git_ref, "TextMap/TextMap_MediumEN.json")
             .await
     }
 
@@ -465,8 +472,8 @@ mod tests {
                 "ExcelBinOutput/WeaponExcelConfigData.json" => {
                     include_str!("test_data/ExcelBinOutput/WeaponExcelConfigData.json")
                 }
-                "TextMap/TextMapEN.json" => {
-                    include_str!("test_data/TextMap/TextMapEN.json")
+                "TextMap/TextMap_MediumEN.json" => {
+                    include_str!("test_data/TextMap/TextMap_MediumEN.json")
                 }
                 _ => return Err(anyhow!("no test data for {path}")),
             };
@@ -709,5 +716,36 @@ mod tests {
         // After updating an update is no longer needed.
         data.update_impl(&source2).await.unwrap();
         assert!(!data.needs_update_impl(&source2).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn old_database_version_cache_is_ignored() {
+        let tempfile = NamedTempFile::new().unwrap();
+
+        let source = TestDataSource;
+
+        // Force an old database version to be cached.
+        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+        data.update_impl(&source).await.unwrap();
+        data.db.as_mut().unwrap().version = 0;
+        data.try_save_db().unwrap();
+        drop(data);
+
+        // Re-open with cache and ensure the old data is not loaded.
+        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+
+        // Affix does not exist before update
+        assert!(data.get_affix(501022).is_err());
+
+        data.update_impl(&source).await.unwrap();
+
+        // Affix exists after update
+        assert_eq!(
+            data.get_affix(501022).unwrap(),
+            &Affix {
+                property: Property::Hp,
+                value: 239.0
+            }
+        );
     }
 }
