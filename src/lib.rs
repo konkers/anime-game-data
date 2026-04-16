@@ -87,11 +87,11 @@ pub struct AnimeGameData {
 }
 
 impl AnimeGameData {
-    pub fn new() -> Result<Self> {
-        Ok(Self {
+    pub fn new() -> Self {
+        Self {
             cache_path: None,
             db: None,
-        })
+        }
     }
 
     pub fn new_from_reader<R: Read>(reader: R) -> Result<Self> {
@@ -102,17 +102,17 @@ impl AnimeGameData {
         })
     }
 
-    pub fn new_with_cache<P: AsRef<Path>>(cache_path: P) -> Result<Self> {
+    pub fn new_with_cache<P: AsRef<Path>>(cache_path: P) -> Self {
         let cache_path = cache_path.as_ref();
 
         // Try to load cached data ignoring errors and instead leave and empty
         // database.
         let db = Database::load_from_path(cache_path).ok();
 
-        Ok(Self {
+        Self {
             cache_path: Some(cache_path.to_owned()),
             db,
-        })
+        }
     }
 
     pub fn save_to_writer<W: Write>(&self, writer: W) -> Result<()> {
@@ -518,7 +518,7 @@ mod tests {
     #[tokio::test]
     async fn character_map_returns_correct_character() {
         let source = TestDataSource;
-        let mut data = AnimeGameData::new().unwrap();
+        let mut data = AnimeGameData::new();
         data.update_impl(&source).await.unwrap();
         assert_eq!(data.get_character(10000061).unwrap(), &"Kirara".to_string());
     }
@@ -526,7 +526,7 @@ mod tests {
     #[tokio::test]
     async fn skill_type_map_returns_correct_type() {
         let source = TestDataSource;
-        let mut data = AnimeGameData::new().unwrap();
+        let mut data = AnimeGameData::new();
         data.update_impl(&source).await.unwrap();
         assert_eq!(data.get_skill_type(10024).unwrap(), &SkillType::Auto);
         assert_eq!(data.get_skill_type(10018).unwrap(), &SkillType::Skill);
@@ -536,7 +536,7 @@ mod tests {
     #[tokio::test]
     async fn set_map_returns_correct_set() {
         let source = TestDataSource;
-        let mut data = AnimeGameData::new().unwrap();
+        let mut data = AnimeGameData::new();
         data.update_impl(&source).await.unwrap();
         assert_eq!(
             data.get_set(15031).unwrap(),
@@ -547,7 +547,7 @@ mod tests {
     #[tokio::test]
     async fn material_map_returns_correct_material() {
         let source = TestDataSource;
-        let mut data = AnimeGameData::new().unwrap();
+        let mut data = AnimeGameData::new();
         data.update_impl(&source).await.unwrap();
         assert_eq!(data.get_material(100002).unwrap(), &"Sunsettia".to_string());
     }
@@ -555,7 +555,7 @@ mod tests {
     #[tokio::test]
     async fn affix_map_returns_correct_affix() {
         let source = TestDataSource;
-        let mut data = AnimeGameData::new().unwrap();
+        let mut data = AnimeGameData::new();
         data.update_impl(&source).await.unwrap();
 
         // Flat affixes contain their vaule unmodified.
@@ -580,7 +580,7 @@ mod tests {
     #[tokio::test]
     async fn artifact_map_returns_correct_artifact() {
         let source = TestDataSource;
-        let mut data = AnimeGameData::new().unwrap();
+        let mut data = AnimeGameData::new();
         data.update_impl(&source).await.unwrap();
 
         assert_eq!(
@@ -596,7 +596,7 @@ mod tests {
     #[tokio::test]
     async fn proptery_map_returns_correct_property() {
         let source = TestDataSource;
-        let mut data = AnimeGameData::new().unwrap();
+        let mut data = AnimeGameData::new();
         data.update_impl(&source).await.unwrap();
 
         assert_eq!(data.get_property(50960).unwrap(), &Property::PyroDamage);
@@ -605,7 +605,7 @@ mod tests {
     #[tokio::test]
     async fn weapon_map_returns_correct_weapon() {
         let source = TestDataSource;
-        let mut data = AnimeGameData::new().unwrap();
+        let mut data = AnimeGameData::new();
         data.update_impl(&source).await.unwrap();
 
         assert_eq!(
@@ -622,7 +622,7 @@ mod tests {
         let tempfile = NamedTempFile::new().unwrap();
 
         let source = TestDataSource;
-        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+        let mut data = AnimeGameData::new_with_cache(tempfile.path());
 
         // Affix does not exist before update
         assert!(data.get_affix(501022).is_err());
@@ -641,7 +641,7 @@ mod tests {
         drop(data);
 
         // Re-open data with valid cache.
-        let data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+        let data = AnimeGameData::new_with_cache(tempfile.path());
 
         // Affix exists after loading from cache
         assert_eq!(
@@ -658,7 +658,7 @@ mod tests {
         let tempfile = NamedTempFile::new().unwrap();
 
         let source = TestDataSource;
-        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+        let mut data = AnimeGameData::new_with_cache(tempfile.path());
 
         // Affix does not exist before update
         assert!(data.get_affix(501022).is_err());
@@ -677,7 +677,7 @@ mod tests {
         drop(data);
 
         // Re-open data with valid cache.
-        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+        let mut data = AnimeGameData::new_with_cache(tempfile.path());
 
         // Affix exists after loading from cache
         assert_eq!(
@@ -705,7 +705,7 @@ mod tests {
     async fn needs_update_is_correct_across_caches_and_updates() {
         let tempfile = NamedTempFile::new().unwrap();
 
-        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+        let mut data = AnimeGameData::new_with_cache(tempfile.path());
 
         let source = TestDataSource;
         let source2 = TestDataSource2;
@@ -718,7 +718,7 @@ mod tests {
 
         drop(data);
 
-        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+        let mut data = AnimeGameData::new_with_cache(tempfile.path());
         // After re-opening A new database doesn't need an update from the same
         // source.
         assert!(!data.needs_update_impl(&source).await.unwrap());
@@ -738,14 +738,14 @@ mod tests {
         let source = TestDataSource;
 
         // Force an old database version to be cached.
-        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+        let mut data = AnimeGameData::new_with_cache(tempfile.path());
         data.update_impl(&source).await.unwrap();
         data.db.as_mut().unwrap().version = 0;
         data.try_save_db().unwrap();
         drop(data);
 
         // Re-open with cache and ensure the old data is not loaded.
-        let mut data = AnimeGameData::new_with_cache(tempfile.path()).unwrap();
+        let mut data = AnimeGameData::new_with_cache(tempfile.path());
 
         // Affix does not exist before update
         assert!(data.get_affix(501022).is_err());
@@ -769,7 +769,7 @@ mod tests {
         let source = TestDataSource;
 
         // Save database to tempfile.
-        let mut data = AnimeGameData::new().unwrap();
+        let mut data = AnimeGameData::new();
         data.update_impl(&source).await.unwrap();
         let writer = File::create(tempfile.path()).unwrap();
         data.save_to_writer(writer).unwrap();
