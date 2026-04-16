@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow};
@@ -94,6 +94,14 @@ impl AnimeGameData {
         })
     }
 
+    pub fn new_from_reader<R: Read>(reader: R) -> Result<Self> {
+        let db = serde_json::from_reader(reader)?;
+        Ok(Self {
+            cache_path: None,
+            db,
+        })
+    }
+
     pub fn new_with_cache<P: AsRef<Path>>(cache_path: P) -> Result<Self> {
         let cache_path = cache_path.as_ref();
 
@@ -105,6 +113,11 @@ impl AnimeGameData {
             cache_path: Some(cache_path.to_owned()),
             db,
         })
+    }
+
+    pub fn save_to_writer<W: Write>(&self, writer: W) -> Result<()> {
+        serde_json::to_writer_pretty(writer, self.db()?)?;
+        Ok(())
     }
 
     fn db(&self) -> Result<&Database> {
@@ -740,6 +753,33 @@ mod tests {
         data.update_impl(&source).await.unwrap();
 
         // Affix exists after update
+        assert_eq!(
+            data.get_affix(501022).unwrap(),
+            &Affix {
+                property: Property::Hp,
+                value: 239.0
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn saving_to_and_reading_from_reader_works() {
+        let tempfile = NamedTempFile::new().unwrap();
+
+        let source = TestDataSource;
+
+        // Save database to tempfile.
+        let mut data = AnimeGameData::new().unwrap();
+        data.update_impl(&source).await.unwrap();
+        let writer = File::create(tempfile.path()).unwrap();
+        data.save_to_writer(writer).unwrap();
+        drop(data);
+
+        // Re-open database from tempfile
+        let reader = File::open(tempfile.path()).unwrap();
+        let data = AnimeGameData::new_from_reader(reader).unwrap();
+
+        // Affix exists without updating
         assert_eq!(
             data.get_affix(501022).unwrap(),
             &Affix {
