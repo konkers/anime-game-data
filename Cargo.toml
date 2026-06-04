@@ -8,7 +8,7 @@ license = "MIT"
 [dependencies]
 anyhow = "1.0.99"
 clap = { version = "4.5.46", features = ["derive"], optional = true }
-reqwest = { version = "0.12.23", features = ["gzip", "json"] }
+reqwest = { version = "0.12.23", features = ["gzip", "json"], optional = true }
 serde = { version = "1.0.219", features = ["derive", "alloc"] }
 serde_json = { version = "1.0.143", features = ["alloc"] }
 tokio = { version = "1.47.1", features = [
@@ -29,7 +29,9 @@ tokio = { version = "1.47.1", features = [
 ] }
 
 [features]
-cli = ["dep:clap", "dep:tokio"]
+default = []
+cli = ["dep:clap", "dep:tokio", "network"]
+network = ["dep:reqwest", "dep:tokio"]
 
 [[bin]]
 name = "anime-game-data"

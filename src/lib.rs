@@ -5,11 +5,14 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Result, anyhow};
 
+#[cfg(feature = "network")]
 mod dimbreath;
 mod game_data;
 mod types;
 
+#[cfg(feature = "network")]
 use dimbreath::Dimbreath;
+#[cfg(feature = "network")]
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 pub use types::*;
@@ -19,6 +22,7 @@ use crate::game_data::{
     ReliquaryMainPropExcelConfigDataEntry, WeaponExcelConfigDataEntry,
 };
 
+#[cfg(feature = "network")]
 trait GameDataSource {
     async fn get_latest_hash(&self) -> Result<String>;
     async fn get_json_file<T: DeserializeOwned>(&self, git_ref: &str, path: &str) -> Result<T>;
@@ -184,10 +188,12 @@ impl AnimeGameData {
         self.db.is_some()
     }
 
+    #[cfg(feature = "network")]
     pub async fn needs_update(&self) -> Result<bool> {
         self.needs_update_impl(&Dimbreath::new()?).await
     }
 
+    #[cfg(feature = "network")]
     async fn needs_update_impl<Source: GameDataSource>(&self, source: &Source) -> Result<bool> {
         let Some(db) = &self.db else {
             return Ok(true);
@@ -195,10 +201,12 @@ impl AnimeGameData {
         Ok(db.git_hash != source.get_latest_hash().await?)
     }
 
+    #[cfg(feature = "network")]
     pub async fn update(&mut self) -> Result<()> {
         self.update_impl(&Dimbreath::new()?).await
     }
 
+    #[cfg(feature = "network")]
     async fn update_impl<Source: GameDataSource>(&mut self, source: &Source) -> Result<()> {
         tracing::info!("Checking for updated data");
         // Check if data is already up to date
@@ -258,6 +266,7 @@ impl AnimeGameData {
         Ok(())
     }
 
+    #[cfg(feature = "network")]
     async fn fetch_affix_map<Source: GameDataSource>(
         source: &Source,
         git_ref: &str,
@@ -280,6 +289,7 @@ impl AnimeGameData {
             .collect())
     }
 
+    #[cfg(feature = "network")]
     async fn fetch_artifact_map<Source: GameDataSource>(
         source: &Source,
         git_ref: &str,
@@ -308,6 +318,7 @@ impl AnimeGameData {
         Ok(map)
     }
 
+    #[cfg(feature = "network")]
     async fn fetch_character_map<Source: GameDataSource>(
         source: &Source,
         git_ref: &str,
@@ -328,6 +339,7 @@ impl AnimeGameData {
             .collect())
     }
 
+    #[cfg(feature = "network")]
     async fn fetch_material_map<Source: GameDataSource>(
         source: &Source,
         git_ref: &str,
@@ -348,6 +360,7 @@ impl AnimeGameData {
             .collect())
     }
 
+    #[cfg(feature = "network")]
     async fn fetch_property_map<Source: GameDataSource>(
         source: &Source,
         git_ref: &str,
@@ -365,6 +378,7 @@ impl AnimeGameData {
             .collect())
     }
 
+    #[cfg(feature = "network")]
     async fn fetch_set_map<Source: GameDataSource>(
         source: &Source,
         git_ref: &str,
@@ -386,6 +400,7 @@ impl AnimeGameData {
             .collect())
     }
 
+    #[cfg(feature = "network")]
     async fn fetch_skill_type_map<Source: GameDataSource>(
         source: &Source,
         git_ref: &str,
@@ -407,6 +422,7 @@ impl AnimeGameData {
         Ok(type_map)
     }
 
+    #[cfg(feature = "network")]
     async fn fetch_text_map<Source: GameDataSource>(
         source: &Source,
         git_ref: &str,
@@ -416,6 +432,7 @@ impl AnimeGameData {
             .await
     }
 
+    #[cfg(feature = "network")]
     async fn fetch_weapon_map<Source: GameDataSource>(
         source: &Source,
         git_ref: &str,
