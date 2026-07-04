@@ -4,8 +4,8 @@ use serde::de::DeserializeOwned;
 
 use super::GameDataSource;
 
-const COMMITS_API_URL: &str = "https://gitlab.com/api/v4/projects/53216109/repository/commits";
-const REPO_BASE_URL: &str = "https://gitlab.com/Dimbreath/AnimeGameData/-/raw";
+const COMMITS_API_URL: &str = "https://gitlab.com/api/v4/projects/83871005/repository/commits";
+const REPO_BASE_URL: &str = "https://gitlab.com/Dimbreath/animegamedata2/-/raw";
 
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
