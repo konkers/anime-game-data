@@ -49,5 +49,25 @@
     "typeDescTextMapHash": 4277744927,
     "useLevel": 0,
     "weight": 0
+  },
+  {
+    "descTextMapHash": 629015074,
+    "icon": "UI_RelicIcon_10001_4",
+    "id": 400000,
+    "itemType": "ITEM_DISPLAY",
+    "nameTextMapHash": 3420004305,
+    "param": 10001,
+    "rankLevel": 1,
+    "typeDescTextMapHash": 1010293527
+  },
+  {
+    "descTextMapHash": 2571399602,
+    "displayType": "BARTENDER_ITEM",
+    "icon": "UI_DisplayItemIcon_410001",
+    "id": 410001,
+    "itemType": "ITEM_DISPLAY",
+    "nameTextMapHash": 3306372425,
+    "rankLevel": 1,
+    "typeDescTextMapHash": 1010293527
   }
 ]

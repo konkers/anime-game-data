@@ -292,7 +292,7 @@ impl AnimeGameData {
         let map = data
             .iter()
             .filter_map(|entry| {
-                let set = set_map.get(&entry.set_id)?.to_string();
+                let set = set_map.get(&entry.set_id?)?.to_string();
                 let slot = ArtifactSlot::from_game_data_name(&entry.equip_type)?;
                 Some((
                     entry.id,
@@ -381,7 +381,7 @@ impl AnimeGameData {
                     return None;
                 }
                 let name = lookup_text(text_map, entry.name_text_map_hash)?;
-                Some((entry.param, name.clone()))
+                Some((entry.param?, name.clone()))
             })
             .collect())
     }
@@ -399,9 +399,17 @@ impl AnimeGameData {
 
         let mut type_map = HashMap::new();
         for config in data {
-            type_map.insert(config.energy_skill, SkillType::Burst);
-            type_map.insert(config.skills[0], SkillType::Auto);
-            type_map.insert(config.skills[1], SkillType::Skill);
+            // Depots without a burst (e.g. the elementless Traveler) have no
+            // energy skill, and skill slots may be empty or missing.
+            if let Some(skill) = config.energy_skill {
+                type_map.insert(skill, SkillType::Burst);
+            }
+            if let Some(skill) = config.skill(0) {
+                type_map.insert(skill, SkillType::Auto);
+            }
+            if let Some(skill) = config.skill(1) {
+                type_map.insert(skill, SkillType::Skill);
+            }
         }
 
         Ok(type_map)
@@ -531,6 +539,40 @@ mod tests {
         assert_eq!(data.get_skill_type(10024).unwrap(), &SkillType::Auto);
         assert_eq!(data.get_skill_type(10018).unwrap(), &SkillType::Skill);
         assert_eq!(data.get_skill_type(10019).unwrap(), &SkillType::Burst);
+    }
+
+    #[tokio::test]
+    async fn skill_type_map_handles_omitted_energy_skill() {
+        let source = TestDataSource;
+        let mut data = AnimeGameData::new();
+        data.update_impl(&source).await.unwrap();
+
+        // Depot 501 (elementless Traveler) has no energySkill field and only
+        // a normal attack.  Its normal attack is still indexed...
+        assert_eq!(data.get_skill_type(100540).unwrap(), &SkillType::Auto);
+
+        // ...but the defaulted (0) energy skill and empty skill slots are not.
+        assert!(data.get_skill_type(0).is_err());
+    }
+
+    #[tokio::test]
+    async fn set_map_treats_omitted_display_type_as_reliquary_item() {
+        let source = TestDataSource;
+        let mut data = AnimeGameData::new();
+        data.update_impl(&source).await.unwrap();
+
+        // Display item 400000 omits displayType, which means RELIQUARY_ITEM.
+        assert_eq!(data.get_set(10001).unwrap(), &"Initiate".to_string());
+    }
+
+    #[tokio::test]
+    async fn artifact_map_skips_artifacts_with_omitted_set_id() {
+        let source = TestDataSource;
+        let mut data = AnimeGameData::new();
+        data.update_impl(&source).await.unwrap();
+
+        // Reliquary 20002 belongs to no set and omits setId.
+        assert!(data.get_artifact(20002).is_err());
     }
 
     #[tokio::test]

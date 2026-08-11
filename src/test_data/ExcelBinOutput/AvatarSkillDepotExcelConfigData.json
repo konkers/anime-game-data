@@ -60,5 +60,35 @@
       26
     ],
     "talentStarName": "Talent_Ayaka"
+  },
+  {
+    "extraAbilities": [
+      "",
+      "",
+      ""
+    ],
+    "id": 501,
+    "skillDepotAbilityGroup": "Avatar_Player_AbilityGroup_Boy_Common",
+    "skills": [
+      100540,
+      0,
+      0,
+      0
+    ],
+    "subSkills": [
+      10035,
+      10101,
+      10001,
+      10102,
+      5005010
+    ],
+    "talents": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
   }
 ]
