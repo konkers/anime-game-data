@@ -6,18 +6,20 @@ use serde::Deserialize;
 // them still deserialize, with optional id fields typed as `Option`.
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
 pub struct AvatarExcelConfigDataEntry {
     #[serde(default)]
     pub id: u32,
-    #[serde(default, rename = "nameTextMapHash")]
+    #[serde(default)]
     pub name_text_map_hash: u32,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
 pub struct AvatarSkillDepotExcelConfigDataEntry {
-    #[serde(default, rename = "energySkill")]
+    #[serde(default)]
     pub energy_skill: Option<u32>,
     #[serde(default)]
     skills: Vec<u32>,
@@ -37,65 +39,71 @@ fn default_display_type() -> String {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
 pub struct DisplayItemExcelConfigDataEntry {
-    #[serde(default = "default_display_type", rename = "displayType")]
+    #[serde(default = "default_display_type")]
     pub display_type: String,
-    #[serde(default, rename = "nameTextMapHash")]
+    #[serde(default)]
     pub name_text_map_hash: u32,
     #[serde(default)]
     pub param: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
 pub struct MaterialExcelConfigDataEntry {
     #[serde(default)]
     pub id: u32,
-    #[serde(default, rename = "nameTextMapHash")]
+    #[serde(default)]
     pub name_text_map_hash: u32,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
 pub struct ReliquaryAffixExcelConfigDataEntry {
     #[serde(default)]
     pub id: u32,
-    #[serde(default, rename = "propType")]
+    #[serde(default)]
     pub prop_type: String,
-    #[serde(default, rename = "propValue")]
+    #[serde(default)]
     pub prop_value: f64,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
 pub struct ReliquaryExcelConfigDataEntry {
-    #[serde(default, rename = "equipType")]
+    #[serde(default)]
     pub equip_type: String,
     #[serde(default)]
     pub id: u32,
-    #[serde(default, rename = "rankLevel")]
+    #[serde(default)]
     pub rank_level: u32,
-    #[serde(default, rename = "setId")]
+    #[serde(default)]
     pub set_id: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
 pub struct ReliquaryMainPropExcelConfigDataEntry {
     #[serde(default)]
     pub id: u32,
-    #[serde(default, rename = "propType")]
+    #[serde(default)]
     pub prop_type: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
 pub struct WeaponExcelConfigDataEntry {
     #[serde(default)]
     pub id: u32,
-    #[serde(default, rename = "nameTextMapHash")]
+    #[serde(default)]
     pub name_text_map_hash: u32,
-    #[serde(default, rename = "rankLevel")]
+    #[serde(default)]
     pub rank_level: u32,
 }
