@@ -32,5 +32,22 @@
     "storyId": 185313,
     "useLevel": 0,
     "weight": 1
+  },
+  {
+    "appendPropDepotId": 101,
+    "baseConvExp": 420,
+    "descTextMapHash": 1560366496,
+    "equipType": "EQUIP_NECKLACE",
+    "gadgetId": 70600041,
+    "icon": "UI_RelicIcon_10000_2",
+    "id": 20002,
+    "itemType": "ITEM_RELIQUARY",
+    "mainPropDepotId": 2000,
+    "maxLevel": 1,
+    "nameTextMapHash": 3920301092,
+    "rank": 10,
+    "rankLevel": 1,
+    "showPic": "Eff_UI_RelicIcon_10000_2",
+    "weight": 1
   }
 ]
