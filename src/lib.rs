@@ -449,6 +449,12 @@ impl AnimeGameData {
     }
 }
 
+impl Default for AnimeGameData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::anyhow;
