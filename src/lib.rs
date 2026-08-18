@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use anyhow::{Result, anyhow};
 
@@ -15,7 +16,7 @@ use serde::{Deserialize, Serialize};
 pub use types::*;
 
 use crate::game_data::{
-    AvatarExcelConfigDataEntry, MaterialExcelConfigDataEntry,
+    AvatarExcelConfigDataEntry, ConstValueExcelConfigDataEntry, MaterialExcelConfigDataEntry,
     ReliquaryMainPropExcelConfigDataEntry, WeaponExcelConfigDataEntry,
 };
 
@@ -32,7 +33,23 @@ fn lookup_text(text_map: &HashMap<u32, String>, id: u32) -> Option<&String> {
     res
 }
 
-const DATABASE_VERSION: u32 = 1;
+// Const values are stored as strings and padded out to six slots, so scalar
+// constants live in the first slot.
+fn lookup_const_value<T: FromStr>(
+    const_value_map: &HashMap<String, Vec<String>>,
+    name: &str,
+) -> Option<T> {
+    let res = const_value_map
+        .get(name)
+        .and_then(|values| values.first())
+        .and_then(|value| value.parse().ok());
+    if res.is_none() {
+        tracing::debug!("Unable to lookup const value {name}");
+    }
+    res
+}
+
+const DATABASE_VERSION: u32 = 2;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Database {
@@ -45,6 +62,8 @@ struct Database {
     property_map: HashMap<u32, Property>,
     set_map: HashMap<u32, String>,
     skill_type_map: HashMap<u32, SkillType>,
+    tps_avatar_id_female: Option<u32>,
+    tps_avatar_id_male: Option<u32>,
     weapon_map: HashMap<u32, Weapon>,
 }
 
@@ -60,6 +79,8 @@ impl Database {
             property_map: HashMap::new(),
             set_map: HashMap::new(),
             skill_type_map: HashMap::new(),
+            tps_avatar_id_female: None,
+            tps_avatar_id_male: None,
             weapon_map: HashMap::new(),
         }
     }
@@ -173,6 +194,18 @@ impl AnimeGameData {
             .ok_or_else(|| anyhow!("Unable to fetch skill type {id}"))
     }
 
+    pub fn get_tps_avatar_id_female(&self) -> Result<u32> {
+        self.db()?
+            .tps_avatar_id_female
+            .ok_or_else(|| anyhow!("Unable to fetch female TPS avatar id"))
+    }
+
+    pub fn get_tps_avatar_id_male(&self) -> Result<u32> {
+        self.db()?
+            .tps_avatar_id_male
+            .ok_or_else(|| anyhow!("Unable to fetch male TPS avatar id"))
+    }
+
     pub fn get_weapon(&self, id: u32) -> Result<&Weapon> {
         self.db()?
             .weapon_map
@@ -239,6 +272,13 @@ impl AnimeGameData {
 
         tracing::info!("Downloading character map");
         db.character_map = Self::fetch_character_map(source, &latest_git_hash, &text_map).await?;
+
+        tracing::info!("Downloading const value map");
+        let const_value_map = Self::fetch_const_value_map(source, &latest_git_hash).await?;
+        db.tps_avatar_id_female =
+            lookup_const_value(&const_value_map, "CONST_VALUE_TPS_AVATAR_CONFIG_ID_FEMALE");
+        db.tps_avatar_id_male =
+            lookup_const_value(&const_value_map, "CONST_VALUE_TPS_AVATAR_CONFIG_ID_MALE");
 
         self.db = Some(db);
 
@@ -325,6 +365,20 @@ impl AnimeGameData {
                     lookup_text(text_map, entry.name_text_map_hash)?.clone(),
                 ))
             })
+            .collect())
+    }
+
+    async fn fetch_const_value_map<Source: GameDataSource>(
+        source: &Source,
+        git_ref: &str,
+    ) -> Result<HashMap<String, Vec<String>>> {
+        let data: Vec<ConstValueExcelConfigDataEntry> = source
+            .get_json_file(git_ref, "ExcelBinOutput/ConstValueExcelConfigData.json")
+            .await?;
+
+        Ok(data
+            .into_iter()
+            .map(|entry| (entry.name, entry.value))
             .collect())
     }
 
@@ -496,6 +550,9 @@ mod tests {
                 "ExcelBinOutput/AvatarSkillDepotExcelConfigData.json" => {
                     include_str!("test_data/ExcelBinOutput/AvatarSkillDepotExcelConfigData.json")
                 }
+                "ExcelBinOutput/ConstValueExcelConfigData.json" => {
+                    include_str!("test_data/ExcelBinOutput/ConstValueExcelConfigData.json")
+                }
                 "ExcelBinOutput/WeaponExcelConfigData.json" => {
                     include_str!("test_data/ExcelBinOutput/WeaponExcelConfigData.json")
                 }
@@ -521,6 +578,26 @@ mod tests {
             let json_string = match path {
                 "ExcelBinOutput/ReliquaryAffixExcelConfigData.json" => {
                     include_str!("test_data/ExcelBinOutput/ReliquaryAffixExcelConfigData2.json")
+                }
+                _ => return TestDataSource {}.get_json_file(git_ref, path).await,
+            };
+            let data = serde_json::from_str(json_string)?;
+            Ok(data)
+        }
+    }
+
+    // A source whose const value data is missing the entries indexed below.
+    struct TestDataSource3;
+
+    impl GameDataSource for TestDataSource3 {
+        async fn get_latest_hash(&self) -> Result<String> {
+            Ok("13be4fd7343fe4cee8fa0096fe854b1c5b01b124-3".into())
+        }
+
+        async fn get_json_file<T: DeserializeOwned>(&self, git_ref: &str, path: &str) -> Result<T> {
+            let json_string = match path {
+                "ExcelBinOutput/ConstValueExcelConfigData.json" => {
+                    include_str!("test_data/ExcelBinOutput/ConstValueExcelConfigData2.json")
                 }
                 _ => return TestDataSource {}.get_json_file(git_ref, path).await,
             };
@@ -648,6 +725,30 @@ mod tests {
         data.update_impl(&source).await.unwrap();
 
         assert_eq!(data.get_property(50960).unwrap(), &Property::PyroDamage);
+    }
+
+    #[tokio::test]
+    async fn const_values_return_correct_tps_avatar_ids() {
+        let source = TestDataSource;
+        let mut data = AnimeGameData::new();
+        data.update_impl(&source).await.unwrap();
+
+        assert_eq!(data.get_tps_avatar_id_female().unwrap(), 10000135);
+        assert_eq!(data.get_tps_avatar_id_male().unwrap(), 10000134);
+    }
+
+    #[tokio::test]
+    async fn missing_const_values_are_not_indexed() {
+        let source = TestDataSource3;
+        let mut data = AnimeGameData::new();
+        data.update_impl(&source).await.unwrap();
+
+        // The rest of the database still indexes...
+        assert_eq!(data.get_character(10000061).unwrap(), &"Kirara".to_string());
+
+        // ...but the absent const values have no value to return.
+        assert!(data.get_tps_avatar_id_female().is_err());
+        assert!(data.get_tps_avatar_id_male().is_err());
     }
 
     #[tokio::test]

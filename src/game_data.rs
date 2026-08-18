@@ -32,6 +32,15 @@ impl AvatarSkillDepotExcelConfigDataEntry {
     }
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConstValueExcelConfigDataEntry {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub value: Vec<String>,
+}
+
 // `RELIQUARY_ITEM` is `displayType`'s first enum variant, so it is what an
 // omitted field means.
 fn default_display_type() -> String {
