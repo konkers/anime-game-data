@@ -7,7 +7,6 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub struct AvatarExcelConfigDataEntry {
     #[serde(default)]
     pub id: u32,
@@ -17,7 +16,6 @@ pub struct AvatarExcelConfigDataEntry {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub struct AvatarSkillDepotExcelConfigDataEntry {
     #[serde(default)]
     pub energy_skill: Option<u32>,
@@ -49,7 +47,6 @@ fn default_display_type() -> String {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub struct DisplayItemExcelConfigDataEntry {
     #[serde(default = "default_display_type")]
     pub display_type: String,
@@ -61,7 +58,6 @@ pub struct DisplayItemExcelConfigDataEntry {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub struct MaterialExcelConfigDataEntry {
     #[serde(default)]
     pub id: u32,
@@ -71,7 +67,6 @@ pub struct MaterialExcelConfigDataEntry {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub struct ReliquaryAffixExcelConfigDataEntry {
     #[serde(default)]
     pub id: u32,
@@ -83,7 +78,6 @@ pub struct ReliquaryAffixExcelConfigDataEntry {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub struct ReliquaryExcelConfigDataEntry {
     #[serde(default)]
     pub equip_type: String,
@@ -97,7 +91,6 @@ pub struct ReliquaryExcelConfigDataEntry {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub struct ReliquaryMainPropExcelConfigDataEntry {
     #[serde(default)]
     pub id: u32,
@@ -107,7 +100,6 @@ pub struct ReliquaryMainPropExcelConfigDataEntry {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub struct WeaponExcelConfigDataEntry {
     #[serde(default)]
     pub id: u32,
