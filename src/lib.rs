@@ -50,7 +50,7 @@ fn lookup_const_value<T: FromStr>(
     res
 }
 
-const DATABASE_VERSION: u32 = 3;
+const DATABASE_VERSION: u32 = 4;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Database {
@@ -437,18 +437,26 @@ impl AnimeGameData {
         git_ref: &str,
         text_map: &HashMap<u32, String>,
     ) -> Result<HashMap<u32, String>> {
-        let data: Vec<game_data::DisplayItemExcelConfigDataEntry> = source
-            .get_json_file(git_ref, "ExcelBinOutput/DisplayItemExcelConfigData.json")
+        let affix_data: Vec<game_data::EquipAffixExcelConfigDataEntry> = source
+            .get_json_file(git_ref, "ExcelBinOutput/EquipAffixExcelConfigData.json")
             .await?;
 
-        Ok(data
+        // An affix has one entry per set bonus tier, all sharing the set's name.
+        let affix_names: HashMap<u32, &String> = affix_data
+            .iter()
+            .filter_map(|entry| Some((entry.id, lookup_text(text_map, entry.name_text_map_hash)?)))
+            .collect();
+
+        let set_data: Vec<game_data::ReliquarySetExcelConfigDataEntry> = source
+            .get_json_file(git_ref, "ExcelBinOutput/ReliquarySetExcelConfigData.json")
+            .await?;
+
+        Ok(set_data
             .iter()
             .filter_map(|entry| {
-                if entry.display_type != "RELIQUARY_ITEM" {
-                    return None;
-                }
-                let name = lookup_text(text_map, entry.name_text_map_hash)?;
-                Some((entry.param?, name.clone()))
+                // Sets that grant no bonuses omit equipAffixId and have no name.
+                let name = *affix_names.get(&entry.equip_affix_id?)?;
+                Some((entry.set_id, name.clone()))
             })
             .collect())
     }
@@ -576,8 +584,11 @@ mod tests {
                 "ExcelBinOutput/ReliquaryMainPropExcelConfigData.json" => {
                     include_str!("test_data/ExcelBinOutput/ReliquaryMainPropExcelConfigData.json")
                 }
-                "ExcelBinOutput/DisplayItemExcelConfigData.json" => {
-                    include_str!("test_data/ExcelBinOutput/DisplayItemExcelConfigData.json")
+                "ExcelBinOutput/EquipAffixExcelConfigData.json" => {
+                    include_str!("test_data/ExcelBinOutput/EquipAffixExcelConfigData.json")
+                }
+                "ExcelBinOutput/ReliquarySetExcelConfigData.json" => {
+                    include_str!("test_data/ExcelBinOutput/ReliquarySetExcelConfigData.json")
                 }
                 "ExcelBinOutput/AvatarSkillDepotExcelConfigData.json" => {
                     include_str!("test_data/ExcelBinOutput/AvatarSkillDepotExcelConfigData.json")
@@ -701,13 +712,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn set_map_treats_omitted_display_type_as_reliquary_item() {
+    async fn set_map_skips_sets_without_equip_affix() {
         let source = TestDataSource;
         let mut data = AnimeGameData::new();
         data.update_impl(&source).await.unwrap();
 
-        // Display item 400000 omits displayType, which means RELIQUARY_ITEM.
-        assert_eq!(data.get_set(10001).unwrap(), &"Initiate".to_string());
+        // Set 15000 grants no bonuses and omits equipAffixId.
+        assert!(data.get_set(15000).is_err());
     }
 
     #[tokio::test]
@@ -728,6 +739,17 @@ mod tests {
         assert_eq!(
             data.get_set(15031).unwrap(),
             &"Marechaussee Hunter".to_string()
+        );
+        assert_eq!(
+            data.get_set(10001).unwrap(),
+            &"Resolution of Sojourner".to_string()
+        );
+
+        // Set 15048's display item names are missing from the medium text map,
+        // so it is only reachable through its equip affix.
+        assert_eq!(
+            data.get_set(15048).unwrap(),
+            &"Heart of the Furnace".to_string()
         );
     }
 
