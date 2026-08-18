@@ -32,6 +32,15 @@ impl AvatarSkillDepotExcelConfigDataEntry {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AvatarSkillExcelConfigDataEntry {
+    #[serde(default)]
+    pub cost_elem_type: Option<String>,
+    #[serde(default)]
+    pub id: u32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ConstValueExcelConfigDataEntry {
     #[serde(default)]
     pub name: String,

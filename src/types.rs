@@ -48,6 +48,34 @@ impl ArtifactSlot {
     }
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub enum Element {
+    Anemo,
+    Geo,
+    Electro,
+    Hydro,
+    Pyro,
+    Cryo,
+    Dendro,
+}
+
+impl FromStr for Element {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Wind" => Ok(Self::Anemo),
+            "Rock" => Ok(Self::Geo),
+            "Electric" => Ok(Self::Electro),
+            "Water" => Ok(Self::Hydro),
+            "Fire" => Ok(Self::Pyro),
+            "Ice" => Ok(Self::Cryo),
+            "Grass" => Ok(Self::Dendro),
+            _ => Err(anyhow!("unknown element {s}")),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum Property {
     Hp,

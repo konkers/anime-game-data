@@ -16,8 +16,9 @@ use serde::{Deserialize, Serialize};
 pub use types::*;
 
 use crate::game_data::{
-    AvatarExcelConfigDataEntry, ConstValueExcelConfigDataEntry, MaterialExcelConfigDataEntry,
-    ReliquaryMainPropExcelConfigDataEntry, WeaponExcelConfigDataEntry,
+    AvatarExcelConfigDataEntry, AvatarSkillExcelConfigDataEntry, ConstValueExcelConfigDataEntry,
+    MaterialExcelConfigDataEntry, ReliquaryMainPropExcelConfigDataEntry,
+    WeaponExcelConfigDataEntry,
 };
 
 trait GameDataSource {
@@ -49,7 +50,7 @@ fn lookup_const_value<T: FromStr>(
     res
 }
 
-const DATABASE_VERSION: u32 = 2;
+const DATABASE_VERSION: u32 = 3;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Database {
@@ -61,6 +62,7 @@ struct Database {
     material_map: HashMap<u32, String>,
     property_map: HashMap<u32, Property>,
     set_map: HashMap<u32, String>,
+    skill_element_map: HashMap<u32, Element>,
     skill_type_map: HashMap<u32, SkillType>,
     tps_avatar_id_female: Option<u32>,
     tps_avatar_id_male: Option<u32>,
@@ -78,6 +80,7 @@ impl Database {
             material_map: HashMap::new(),
             property_map: HashMap::new(),
             set_map: HashMap::new(),
+            skill_element_map: HashMap::new(),
             skill_type_map: HashMap::new(),
             tps_avatar_id_female: None,
             tps_avatar_id_male: None,
@@ -187,6 +190,13 @@ impl AnimeGameData {
             .ok_or_else(|| anyhow!("Unable to fetch set {id}"))
     }
 
+    pub fn get_skill_element(&self, id: u32) -> Result<&Element> {
+        self.db()?
+            .skill_element_map
+            .get(&id)
+            .ok_or_else(|| anyhow!("Unable to fetch skill element {id}"))
+    }
+
     pub fn get_skill_type(&self, id: u32) -> Result<&SkillType> {
         self.db()?
             .skill_type_map
@@ -251,6 +261,9 @@ impl AnimeGameData {
 
         tracing::info!("Downloading skill type map");
         db.skill_type_map = Self::fetch_skill_type_map(source, &latest_git_hash).await?;
+
+        tracing::info!("Downloading skill element map");
+        db.skill_element_map = Self::fetch_skill_element_map(source, &latest_git_hash).await?;
 
         tracing::info!("Downloading set map");
         db.set_map = Self::fetch_set_map(source, &latest_git_hash, &text_map).await?;
@@ -440,6 +453,25 @@ impl AnimeGameData {
             .collect())
     }
 
+    async fn fetch_skill_element_map<Source: GameDataSource>(
+        source: &Source,
+        git_ref: &str,
+    ) -> Result<HashMap<u32, Element>> {
+        let data: Vec<AvatarSkillExcelConfigDataEntry> = source
+            .get_json_file(git_ref, "ExcelBinOutput/AvatarSkillExcelConfigData.json")
+            .await?;
+
+        Ok(data
+            .iter()
+            .filter_map(|entry| {
+                // Skills that cost no elemental energy omit costElemType and
+                // have no element.
+                let element = entry.cost_elem_type.as_ref()?.parse::<Element>().ok()?;
+                Some((entry.id, element))
+            })
+            .collect())
+    }
+
     async fn fetch_skill_type_map<Source: GameDataSource>(
         source: &Source,
         git_ref: &str,
@@ -550,6 +582,9 @@ mod tests {
                 "ExcelBinOutput/AvatarSkillDepotExcelConfigData.json" => {
                     include_str!("test_data/ExcelBinOutput/AvatarSkillDepotExcelConfigData.json")
                 }
+                "ExcelBinOutput/AvatarSkillExcelConfigData.json" => {
+                    include_str!("test_data/ExcelBinOutput/AvatarSkillExcelConfigData.json")
+                }
                 "ExcelBinOutput/ConstValueExcelConfigData.json" => {
                     include_str!("test_data/ExcelBinOutput/ConstValueExcelConfigData.json")
                 }
@@ -622,6 +657,33 @@ mod tests {
         assert_eq!(data.get_skill_type(10024).unwrap(), &SkillType::Auto);
         assert_eq!(data.get_skill_type(10018).unwrap(), &SkillType::Skill);
         assert_eq!(data.get_skill_type(10019).unwrap(), &SkillType::Burst);
+    }
+
+    #[tokio::test]
+    async fn skill_element_map_returns_correct_element() {
+        let source = TestDataSource;
+        let mut data = AnimeGameData::new();
+        data.update_impl(&source).await.unwrap();
+
+        assert_eq!(data.get_skill_element(10034).unwrap(), &Element::Anemo);
+        assert_eq!(data.get_skill_element(10078).unwrap(), &Element::Geo);
+        assert_eq!(data.get_skill_element(10014).unwrap(), &Element::Electro);
+        assert_eq!(data.get_skill_element(10072).unwrap(), &Element::Hydro);
+        assert_eq!(data.get_skill_element(10017).unwrap(), &Element::Pyro);
+        assert_eq!(data.get_skill_element(10019).unwrap(), &Element::Cryo);
+        assert_eq!(data.get_skill_element(10118).unwrap(), &Element::Dendro);
+    }
+
+    #[tokio::test]
+    async fn skill_element_map_skips_skills_with_omitted_cost_elem_type() {
+        let source = TestDataSource;
+        let mut data = AnimeGameData::new();
+        data.update_impl(&source).await.unwrap();
+
+        // Normal attacks and skills that cost no elemental energy omit
+        // costElemType and are not indexed.
+        assert!(data.get_skill_element(10024).is_err());
+        assert!(data.get_skill_element(10018).is_err());
     }
 
     #[tokio::test]
