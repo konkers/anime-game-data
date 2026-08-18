@@ -59,6 +59,20 @@ pub enum Element {
     Dendro,
 }
 
+impl AsRef<str> for Element {
+    fn as_ref(&self) -> &str {
+        match self {
+            Element::Anemo => "Anemo",
+            Element::Geo => "Geo",
+            Element::Electro => "Electro",
+            Element::Hydro => "Hydro",
+            Element::Pyro => "Pyro",
+            Element::Cryo => "Cryo",
+            Element::Dendro => "Dendro",
+        }
+    }
+}
+
 impl FromStr for Element {
     type Err = Error;
 
