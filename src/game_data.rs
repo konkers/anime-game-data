@@ -48,21 +48,13 @@ pub struct ConstValueExcelConfigDataEntry {
     pub value: Vec<String>,
 }
 
-// `RELIQUARY_ITEM` is `displayType`'s first enum variant, so it is what an
-// omitted field means.
-fn default_display_type() -> String {
-    "RELIQUARY_ITEM".to_string()
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DisplayItemExcelConfigDataEntry {
-    #[serde(default = "default_display_type")]
-    pub display_type: String,
+pub struct EquipAffixExcelConfigDataEntry {
+    #[serde(default)]
+    pub id: u32,
     #[serde(default)]
     pub name_text_map_hash: u32,
-    #[serde(default)]
-    pub param: Option<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -105,6 +97,15 @@ pub struct ReliquaryMainPropExcelConfigDataEntry {
     pub id: u32,
     #[serde(default)]
     pub prop_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReliquarySetExcelConfigDataEntry {
+    #[serde(default)]
+    pub equip_affix_id: Option<u32>,
+    #[serde(default)]
+    pub set_id: u32,
 }
 
 #[derive(Debug, Deserialize)]
